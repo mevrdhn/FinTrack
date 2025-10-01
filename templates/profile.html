@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="card">
+        <h1><i class="fas fa-user-cog"></i> User Profile & Settings</h1>
+
+        <div class="profile-info">
+            <div class="info-item">
+                <label>Username:</label>
+                <span>{{ user.username }}</span>
+            </div>
+            <div class="info-item">
+                <label>Email:</label>
+                <span>{{ user.email }}</span>
+            </div>
+            <div class="info-item">
+                <label>Member Since:</label>
+                <span>{{ user.created_at.strftime('%B %d, %Y') }}</span>
+            </div>
+        </div>
+
+        <h2 style="margin-top: 30px;"><i class="fas fa-wallet"></i> Update Monthly Income</h2>
+        <form action="{{ url_for('profile') }}" method="POST" class="profile-form">
+            <div class="form-group">
+                <label for="monthly_income">Your Base Monthly Income (Rs):</label>
+                <input type="number" id="monthly_income" name="monthly_income" value="{{ user.monthly_income }}" step="0.01" required>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+        </form>
+
+        <div class="profile-stats">
+            <h2><i class="fas fa-chart-bar"></i> Your Financial Stats</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <h4>Total Expenses Recorded</h4>
+                    <p>Rs {{ "%.2f"|format(total_expenses) }}</p>
+                </div>
+                <div class="stat-item">
+                    <h4>Average Monthly Spending</h4>
+                    <p>Rs {{ "%.2f"|format(avg_monthly) }}</p>
+                </div>
+                 <div class="stat-item">
+                    <h4>Total Expenses Logged</h4>
+                    <p>{{ user.expenses.count() }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

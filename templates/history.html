@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="history-container">
+    <div class="card">
+        <h1>Expense History</h1>
+        
+        <!-- Filters -->
+        <div class="filters">
+            <form method="GET" class="filter-form">
+                <div class="filter-grid">
+                    <div class="form-group">
+                        <label for="category">Category:</label>
+                        <select id="category" name="category">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                            <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>
+                                {{ category }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="date_from">From Date:</label>
+                        <input type="date" id="date_from" name="date_from" value="{{ filters.date_from }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="date_to">To Date:</label>
+                        <input type="date" id="date_to" name="date_to" value="{{ filters.date_to }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        <a href="{{ url_for('history') }}" class="btn btn-secondary">Clear</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Export Button -->
+        <div class="export-section">
+            <a href="{{ url_for('export_csv') }}" class="btn btn-success">Export as CSV</a>
+        </div>
+
+        <!-- Expenses Table -->
+        {% if expenses %}
+            <div class="expense-table">
+                <div class="table-header">
+                    <div>Date</div>
+                    <div>Description</div>
+                    <div>Category</div>
+                    <div>Amount</div>
+                    <div>Notes</div>
+                </div>
+                
+                {% for expense in expenses %}
+                <div class="table-row">
+                    <div class="date-cell">{{ expense.date.strftime('%Y-%m-%d') }}</div>
+                    <div class="desc-cell">{{ expense.name }}</div>
+                    <div class="category-cell">
+                        <span class="category-tag {{ expense.category|lower }}">{{ expense.category }}</span>
+                    </div>
+                    <div class="amount-cell">${{ "%.2f"|format(expense.amount) }}</div>
+                    <div class="notes-cell">{{ expense.notes or '-' }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="history-summary">
+                <strong>Total: ${{ "%.2f"|format(expenses|sum(attribute='amount')) }}</strong>
+                <span>{{ expenses|length }} expense(s)</span>
+            </div>
+        {% else %}
+            <p class="no-data">No expenses found matching your criteria.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard">
+    <!-- Summary Cards - UPDATED LAYOUT -->
+    <div class="summary-grid">
+        <div class="summary-card left">
+            <h3>Remaining Balance</h3>
+            <p class="amount">Rs {{ "%.2f"|format(remaining) }}</p>
+        </div>
+        <div class="summary-card salary">
+            <h3>Monthly Income</h3>
+            <p class="amount">Rs {{ "%.2f"|format(salary) }}</p>
+            <div class="subtext">Base + Additional</div>
+        </div>
+        <div class="summary-card additional-income">
+            <h3>Additional Income</h3>
+            <p class="amount">Rs {{ "%.2f"|format(additional_income) }}</p>
+            <div class="subtext">Bonuses & Side Income</div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="dashboard-grid">
+        <!-- Pie Chart -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3>Spending by Category</h3>
+                <div class="chart-actions">
+                    <button class="btn btn-outline" onclick="refreshCharts()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Line Chart -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3>Spending Over Time</h3>
+                <div class="chart-actions">
+                    <select id="timeRange" onchange="updateTimeChart()" class="btn-outline">
+                        <option value="7">Last 7 Days</option>
+                        <option value="30" selected>Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                    </select>
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="timeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Income vs Expenses Chart -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3>Income vs Expenses</h3>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="incomeExpenseChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Budget Recommendations -->
+    <div class="card">
+        <h2><i class="fas fa-piggy-bank"></i> Budget Recommendations</h2>
+        <div class="budget-grid">
+            <div class="budget-item needs">
+                <h4>Needs (50%)</h4>
+                <p>Rs {{ "%.2f"|format(needs_budget) }}</p>
+                <small>Housing, Food, Utilities</small>
+            </div>
+            <div class="budget-item wants">
+                <h4>Wants (30%)</h4>
+                <p>Rs {{ "%.2f"|format(wants_budget) }}</p>
+                <small>Entertainment, Dining</small>
+            </div>
+            <div class="budget-item savings">
+                <h4>Savings (20%)</h4>
+                <p>Rs {{ "%.2f"|format(savings_budget) }}</p>
+                <small>Investments, Emergency</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="action-grid">
+        <!-- Add Expense -->
+        <div class="card">
+            <h2><i class="fas fa-plus-circle"></i> Add New Expense</h2>
+            <form action="{{ url_for('add_expense') }}" method="POST" class="form">
+                <input type="text" name="name" placeholder="What did you buy?" required>
+
+                <input type="number" name="amount" placeholder="How much?" step="0.01" min="0.01" required>
+                
+                <select name="category" required>
+                    <option value="">Select Category</option>
+                    <option value="Food">Food</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Shopping">Shopping</option>
+                    <option value="Bills">Bills</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Other">Other</option>
+                </select>
+
+                <textarea name="notes" placeholder="Additional notes (optional)"></textarea>
+
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-check"></i> Add Expense
+                </button>
+            </form>
+        </div>
+
+        <!-- Add Additional Income -->
+        <div class="card">
+            <h2><i class="fas fa-money-bill-wave"></i> Record Additional Income</h2>
+            <form action="{{ url_for('add_income') }}" method="POST" class="form">
+                <input type="text" name="source" placeholder="Income source (bonus, freelance, etc.)" required>
+
+                <input type="number" name="amount" placeholder="Amount" step="0.01" min="0.01" required>
+                
+                <select name="income_type" required>
+                    <option value="">Select Type</option>
+                    <option value="bonus">Bonus</option>
+                    <option value="freelance">Freelance</option>
+                    <option value="investment">Investment</option>
+                    <option value="side_business">Side Business</option>
+                    <option value="other">Other</option>
+                </select>
+
+                <textarea name="notes" placeholder="Additional notes (optional)"></textarea>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Income
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Action Buttons -->
+    <div class="quick-actions">
+        <a href="{{ url_for('history') }}" class="quick-action-btn">
+            <i class="fas fa-history"></i>
+            <span>View History</span>
+        </a>
+        <a href="{{ url_for('export_csv') }}" class="quick-action-btn">
+            <i class="fas fa-download"></i>
+            <span>Export Data</span>
+        </a>
+        <a href="{{ url_for('profile') }}" class="quick-action-btn">
+            <i class="fas fa-cog"></i>
+            <span>Settings</span>
+        </a>
+    </div>
+
+    <!-- Recent Expenses -->
+    <div class="card">
+        <h2><i class="fas fa-receipt"></i> Recent Expenses</h2>
+        {% if expenses %}
+            <div class="expense-list">
+                {% for expense in expenses %}
+                <div class="expense-item">
+                    <div class="expense-info">
+                        <strong>{{ expense.name }}</strong>
+                        <span class="category-tag {{ expense.category|lower }}">{{ expense.category }}</span>
+                    </div>
+                    <div class="expense-amount">
+                        Rs {{ "%.2f"|format(expense.amount) }}
+                        <small>{{ expense.date.strftime('%m/%d') }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-results-message">No expenses yet. Add your first expense above!</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Chart data from backend
+    const chartData = {{ chart_data|tojson }};
+
+    // Initialize charts
+    let categoryChart, timeChart, incomeExpenseChart;
+
+    function initCharts() {
+        // Category Pie Chart
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        categoryChart = new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: chartData.categories.labels,
+                datasets: [{
+                    data: chartData.categories.data,
+                    backgroundColor: [
+                        '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
+                        '#8B5CF6', '#EC4899', '#06B6D4'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: Rs${value.toFixed(2)} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Time Series Chart
+        const timeCtx = document.getElementById('timeChart').getContext('2d');
+        timeChart = new Chart(timeCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.time_series.labels,
+                datasets: [{
+                    label: 'Daily Spending',
+                    data: chartData.time_series.data,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'Rs' + value;
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Spent: Rs${context.raw.toFixed(2)}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Income vs Expense Chart
+        const incomeExpenseCtx = document.getElementById('incomeExpenseChart').getContext('2d');
+        incomeExpenseChart = new Chart(incomeExpenseCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Income vs Expenses'],
+                datasets: [
+                    {
+                        label: 'Total Income',
+                        data: [chartData.income_expense.income],
+                        backgroundColor: '#10B981',
+                        borderColor: '#059669',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Total Expenses',
+                        data: [chartData.income_expense.expenses],
+                        backgroundColor: '#EF4444',
+                        borderColor: '#DC2626',
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'Rs' + value;
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: Rs${context.raw.toFixed(2)}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateTimeChart() {
+        const days = document.getElementById('timeRange').value;
+        // In a real app, you'd fetch new data from the server
+        // For now, we'll just show a loading state
+        alert(`Loading data for last ${days} days...`);
+    }
+
+    function refreshCharts() {
+        // Reload the page to get fresh data
+        window.location.reload();
+    }
+
+    // Initialize charts when page loads
+    document.addEventListener('DOMContentLoaded', initCharts);
+</script>
+{% endblock %}
