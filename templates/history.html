@@ -63,14 +63,14 @@
                     <div class="category-cell">
                         <span class="category-tag {{ expense.category|lower }}">{{ expense.category }}</span>
                     </div>
-                    <div class="amount-cell">${{ "%.2f"|format(expense.amount) }}</div>
+                    <div class="amount-cell">RS {{ "%.2f"|format(expense.amount) }}</div>
                     <div class="notes-cell">{{ expense.notes or '-' }}</div>
                 </div>
                 {% endfor %}
             </div>
             
             <div class="history-summary">
-                <strong>Total: ${{ "%.2f"|format(expenses|sum(attribute='amount')) }}</strong>
+                <strong>Total: Rs {{ "%.2f"|format(expenses|sum(attribute='amount')) }}</strong>
                 <span>{{ expenses|length }} expense(s)</span>
             </div>
         {% else %}
